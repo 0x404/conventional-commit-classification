@@ -87,3 +87,17 @@ For instance, if you want to use the pre-trained CodeLlama parameters directly, 
 cd RQ3/CodeLlama
 python3 infer.py --checkpoint ../../CheckPoints/CodeLlama-checkpoints
 ```
+
+## Cite Us
+
+If you use this repository in your research, please cite us using the following BibTeX entry:
+
+```bibtex
+@inproceedings{zeng2025conventional,
+  title={A First Look at Conventional Commits Classification},
+  author={Zeng, Qunhong and Zhang, Yuxia and Qiu, Zhiqing and Liu, Hui},
+  booktitle={Proceedings of the IEEE/ACM 47th International Conference on Software Engineering},
+  pages={1--13},
+  year={2025}
+}
+```
