@@ -97,7 +97,6 @@ If you use this repository in your research, please cite us using the following 
   title={A First Look at Conventional Commits Classification},
   author={Zeng, Qunhong and Zhang, Yuxia and Qiu, Zhiqing and Liu, Hui},
   booktitle={Proceedings of the IEEE/ACM 47th International Conference on Software Engineering},
-  pages={1--13},
   year={2025}
 }
 ```
