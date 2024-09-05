@@ -1,10 +1,145 @@
 # A First Look at Conventional Commits Classification
-[Conventional Commits🪄](https://www.conventionalcommits.org/en/v1.0.0/), as a specification for adding both human and machine-readable meaning to commit messages, is increasingly gaining popularity among open-source projects and developers. This study conducts a preliminary study of CCS, encompassing its application status and the challenges developers encounter when using it. We observe a growing popularity of CCS, yet developers do misclassify commits into incorrect CCS types, attributable to the absence of a clear and distinct definition list for each type. We have developed a more precise and less overlapping definition list to address this, grounded in industry practices and literature review. To assist developers in classifying conventional commits, we propose an approach for automated conventional commit classification. Our evaluation demonstrates that our model outperforms a series of baselines as well as ChatGPT4, showcasing promising potential for both industrial and academic applications.
+<p align='center'>
+<a href="https://huggingface.co/datasets/0x404/ccs_dataset">
+  <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-green'>
+</a>
+<a href="https://huggingface.co/0x404/ccs-code-llama-7b">
+  <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-green'>
+</a>
+<a href="https://doi.org/10.6084/m9.figshare.26507083">
+  <img src='https://img.shields.io/badge/Figshare-005C47'>
+</a>
+</p>
+
+[Conventional Commits🪄](https://www.conventionalcommits.org/en/v1.0.0/), as a specification for adding both human and machine-readable meaning to commit messages, is increasingly gaining popularity among open-source projects and developers. We conducts a preliminary study of CCS, encompassing its application status and the challenges developers encounter when using it. We observe a growing popularity of CCS, yet developers do misclassify commits into incorrect CCS types, attributable to the absence of a clear and distinct definition list for each type. We have developed a more precise and less overlapping definition list to address this, grounded in industry practices and literature review. To assist developers in classifying conventional commits, we propose an approach for automated conventional commit classification.
 
 This repository contains all the data and code we used in the study.
 
+## Reproduction
+
+### Using Hugging Face (Recommended)
+
+We have uploaded the dataset and the model's parameters to the Hugging Face hub, making it very easy to replicate our results. First, ensure you have installed the necessary environment:
+
+```shell
+pip3 install transformers datasets scikit-learn
+```
+
+Then, you can use `transformers` and `datasets` to load our model and dataset, and test it on the test set:
+
+```python
+from transformers import pipeline
+from datasets import load_dataset
+from sklearn.metrics import accuracy_score, f1_score
+
+test_dataset = load_dataset("0x404/ccs_dataset", split="test")
+pipe = pipeline("text-generation", model="0x404/ccs-code-llama-7b", device_map="auto")
+
+generated_data = pipe(test_dataset["input_prompt"], max_new_tokens=10, pad_token_id=pipe.tokenizer.eos_token_id)
+generated_label = [s[0]["generated_text"].split()[-1] for s in generated_data]
+
+accuracy = accuracy_score(test_dataset["annotated_type"], generated_label)
+f1 = f1_score(test_dataset["annotated_type"], generated_label, average="macro")
+
+print("Accuracy:", accuracy)
+print("F1 Score (Macro):", f1)
+```
+
+### Use the Code from Scratch
+
+The dataset is available on Hugging Face, making it very easy to access:
+
+```python
+from datasets import load_dataset
+ccs_dataset = load_dataset("0x404/ccs_dataset")
+```
+
+Additionally, in the `Dataset` directory of this repository, we provide two datasets: one containing 88,704 commits in the Conventional Commits format mined from 116 repositories, and another dataset of 2,000 commits that were sampled and manually annotated from them. The manually annotated dataset is utilized for model training, validation, and testing. For detailed information about the datasets, please refer to the README.md in the `Dataset` directory.
+
+To run our code from scratch, you need to install the necessary environments. We provide the version information of all dependent environments in `requirements.txt`, which can be installed with:
+
+```shell
+pip3 install -r requirements.txt
+```
+
+- To replicate the experimental results of ChatGPT4, access the code in the `RQ3/ChatGPT` directory. It includes a `test.csv` file which is our test dataset. Insert your OpenAI Key (with access to ChatGPT4) in the code, then execute it.
+- For replicating BERT experimental results, navigate to the `RQ3/BERT` directory and use the command `python3 main.py --train` for training, and `python3 main.py --test <checkpointpath>` for testing, where `<checkpointpath>` is the location of the saved parameter checkpoint.
+- To replicate the experiments for Llama2 and CodeLlama, find the code in the `RQ3/Llama2` and `RQ3/CodeLlama` directories respectively. Training is executed with `python3 train.py`, and testing with `python3 infer.py --checkpoint <checkpointpath>`, where `<checkpointpath>` is the checkpoint's location, by default in the `llama-output` directory within the current directory.
+
+*Note: To replicate Llama2 and CodeLlama, approximately two 24GB memory GPUs are required. If the appropriate hardware is not available, for ease of replication, we provide the trained LORA parameters in the `CheckPoints` directory. If you wish to directly use the pre-trained CodeLlama parameters, execute the following command:
+
+```shell
+cd RQ3/CodeLlama
+python3 infer.py --checkpoint ../../CheckPoints/CodeLlama-checkpoints
+```
+
+## How to Use
+
+Our model basically accepts two inputs: the commit message and the corresponding git diff. To classify your desired commit, you must follow a specific prompt format. We provide a code snippet as follows:
+
+```python
+from transformers import pipeline
+
+pipe = pipeline("text-generation", model="0x404/ccs-code-llama-7b", device_map="auto")
+tokenizer = pipe.tokenizer
+
+
+def prepare_prompt(commit_message: str, git_diff: str, context_window: int = 1024):
+    prompt_head = "<s>[INST] <<SYS>>\nYou are a commit classifier based on commit message and code diff.Please classify the given commit into one of the ten categories: docs, perf, style, refactor, feat, fix, test, ci, build, and chore. The definitions of each category are as follows:\n**feat**: Code changes aim to introduce new features to the codebase, encompassing both internal and user-oriented features.\n**fix**: Code changes aim to fix bugs and faults within the codebase.\n**perf**: Code changes aim to improve performance, such as enhancing execution speed or reducing memory consumption.\n**style**: Code changes aim to improve readability without affecting the meaning of the code. This type encompasses aspects like variable naming, indentation, and addressing linting or code analysis warnings.\n**refactor**: Code changes aim to restructure the program without changing its behavior, aiming to improve maintainability. To avoid confusion and overlap, we propose the constraint that this category does not include changes classified as ``perf'' or ``style''. Examples include enhancing modularity, refining exception handling, improving scalability, conducting code cleanup, and removing deprecated code.\n**docs**: Code changes that modify documentation or text, such as correcting typos, modifying comments, or updating documentation.\n**test**: Code changes that modify test files, including the addition or updating of tests.\n**ci**: Code changes to CI (Continuous Integration) configuration files and scripts, such as configuring or updating CI/CD scripts, e.g., ``.travis.yml'' and ``.github/workflows''.\n**build**: Code changes affecting the build system (e.g., Maven, Gradle, Cargo). Change examples include updating dependencies, configuring build configurations, and adding scripts.\n**chore**: Code changes for other miscellaneous tasks that do not neatly fit into any of the above categories.\n<</SYS>>\n\n"
+    prompt_head = tokenizer.encode(prompt_head, add_special_tokens=False)
+    prompt_message = tokenizer.encode(
+        f"- given commit message:\n{commit_message}\n",
+        max_length=64,
+        truncation=True,
+        add_special_tokens=False,
+    )
+    prompt_diff = tokenizer.encode(
+        f"- given commit diff: \n{git_diff}\n",
+        max_length=context_window - len(prompt_head) - len(prompt_message) - 6,
+        truncation=True,
+        add_special_tokens=False,
+    )
+    prompt_end = tokenizer.encode(" [/INST]", add_special_tokens=False)
+    return tokenizer.decode(prompt_head + prompt_message + prompt_diff + prompt_end)
+
+
+def classify_commit(commit_message: str, git_diff: str, context_window: int = 1024):
+    prompt = prepare_prompt(commit_message, git_diff, context_window)
+    result = pipe(prompt, max_new_tokens=10, pad_token_id=pipe.tokenizer.eos_token_id)
+    label = result[0]["generated_text"].split()[-1]
+    return label
+
+```
+
+Here, you can use the `classify_commit` function to classify your commit by inputting the commit's message and git diff. The `context_window` controls the size of the entire prompt, set to 1024 by default but adjustable to a larger value like 2048 to include more git diff in one prompt. Here is an example of its usage:
+
+```python
+import requests
+from github import Github
+
+def fetch_message_and_diff(repo_name, commit_sha):
+    g = Github()
+    try:
+        repo = g.get_repo(repo_name)
+        commit = repo.get_commit(commit_sha)
+        if commit.parents:
+            parent_sha = commit.parents[0].sha
+            diff_url = repo.compare(parent_sha, commit_sha).diff_url
+            return commit.commit.message, requests.get(diff_url).text
+        else:
+            raise ValueError("No parent found for this commit, unable to retrieve diff.")
+    except Exception as e:
+        raise RuntimeError(f"Error retrieving commit information: {e}")
+
+message, diff = fetch_message_and_diff("pytorch/pytorch", "9856bc50a251ac054debfdbbb5ed29fc4f6aeb39")
+print(classify_commit(message, diff))
+```
+
+In this setup, we've defined a function `fetch_message_and_diff` that fetches the commit message and diff for any specified SHA from a GitHub repository, enabling our model to classify the commit accordingly.
+
 
 ## Performance of specific CCS types
+
 This table is the full table provided in our RQ3, including precision, recall, and f1 score for each of the ten specific CCS types, with the highest score highlighted in **bold**.
 
 | Metrics            | BERT       | ChatGPT4   | Llama2     | Our Approach |
@@ -55,37 +190,6 @@ This table is the full table provided in our RQ3, including precision, recall, a
 ├── RQ1: Data and code used in RQ1
 ├── RQ2: Analysis of developer challenges in RQ2
 └── RQ3: Code used for training models in RQ3
-```
-
-## Thematic Analysis
-The details of thematic analysis in RQ2 can be found in `RQ2` directory.
-
-## Reproduction
-
-### Dataset
-In the `Dataset` directory, we provide two datasets: one is 88,704 commits in the Conventional Commits format mined from 116 repositories, and the other is a dataset of 2,000 commits sampled and manually annotated from them. The manually annotated dataset is used for model training, validation, and testing. For detailed information about the datasets, please see the README.md in the `Dataset` directory.
-
-### Environment
-Our experiments are based on CUDA 11.8.0 and Ubuntu 22.04.3 LTS, with the main environmental dependencies as follows:
-- `torch==2.1.2+cu118`
-- `transformers==4.36.2`
-- `pytorch-lightning==2.2.0.post0`
-- `datasets==2.17.0`
-- ...
-
-We provide the version information of all the dependent environments in `requirements.txt`, which can be installed using `pip3 install -r requirements.txt`.
-
-### Replication Method
-- To replicate the experimental results of ChatGPT4, the code is located in `RQ3/ChatGPT`, which includes a `test.csv` file that is our test dataset. Fill in your OpenAI Key (with access to ChatGPT4) in the code, then run it.
-- To replicate the BERT experimental results, the code is located in the `RQ3/BERT` directory. Use the command `python3 main.py --train` for training and `python3 main.py --test <checkpointpath>` for testing, where `<checkpointpath>` is the location of the saved parameter checkpoint.
-- To replicate the experiments of Llama2 and CodeLlama, the code is in `RQ3/Llama2` and `RQ3/CodeLlama` directories, where training uses `python3 train.py` and testing uses `python3 infer.py --checkpoint <checkpointpath>`, with `<checkpointpath>` being the location of the saved parameter checkpoint, defaulting to the `llama-output` directory in the current directory.
-
-*Note that to replicate Llama2 and CodeLlama, approximately two 24GB memory GPUs are needed. If the corresponding hardware conditions are not available, for ease of replication of our results, we provide the trained LORA parameters in the `CheckPoints` directory.
-For instance, if you want to use the pre-trained CodeLlama parameters directly, you can do so with the following command:
-
-```shell
-cd RQ3/CodeLlama
-python3 infer.py --checkpoint ../../CheckPoints/CodeLlama-checkpoints
 ```
 
 ## Cite Us
