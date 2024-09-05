@@ -1,15 +1,13 @@
 # A First Look at Conventional Commits Classification
-<p align='center'>
-<a href="https://huggingface.co/datasets/0x404/ccs_dataset">
-  <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-green'>
-</a>
-<a href="https://huggingface.co/0x404/ccs-code-llama-7b">
-  <img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-green'>
-</a>
-<a href="https://doi.org/10.6084/m9.figshare.26507083">
-  <img src='https://img.shields.io/badge/Figshare-005C47'>
-</a>
-</p>
+
+<div align="center">
+
+[![HF Dataset](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-green)](https://huggingface.co/datasets/0x404/ccs_dataset)
+[![HF Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-green)](https://huggingface.co/0x404/ccs-code-llama-7b)
+[![Figshare](https://img.shields.io/badge/Figshare-005C47)](https://doi.org/10.6084/m9.figshare.26507083)
+
+</div>
+
 
 [Conventional Commits🪄](https://www.conventionalcommits.org/en/v1.0.0/), as a specification for adding both human and machine-readable meaning to commit messages, is increasingly gaining popularity among open-source projects and developers. We conducts a preliminary study of CCS, encompassing its application status and the challenges developers encounter when using it. We observe a growing popularity of CCS, yet developers do misclassify commits into incorrect CCS types, attributable to the absence of a clear and distinct definition list for each type. We have developed a more precise and less overlapping definition list to address this, grounded in industry practices and literature review. To assist developers in classifying conventional commits, we propose an approach for automated conventional commit classification.
 
