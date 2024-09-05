@@ -20,7 +20,7 @@ This repository contains all the data and code we used in the study.
 We have uploaded the dataset and the model's parameters to the Hugging Face hub, making it very easy to replicate our results. First, ensure you have installed the necessary environment:
 
 ```shell
-pip3 install transformers datasets scikit-learn
+pip3 install transformers[torch] datasets scikit-learn
 ```
 
 Then, you can use `transformers` and `datasets` to load our model and dataset, and test it on the test set:
