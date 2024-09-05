@@ -33,17 +33,17 @@ from sklearn.metrics import accuracy_score, f1_score
 test_dataset = load_dataset("0x404/ccs_dataset", split="test")
 pipe = pipeline("text-generation", model="0x404/ccs-code-llama-7b", device_map="auto")
 
-generated_data = pipe(test_dataset["input_prompt"], max_new_tokens=10, pad_token_id=pipe.tokenizer.eos_token_id)
-generated_label = [s[0]["generated_text"].split()[-1] for s in generated_data]
+outputs = pipe(test_dataset["input_prompt"], max_new_tokens=10, pad_token_id=pipe.tokenizer.eos_token_id)
+predicted_labels = [output[0]["generated_text"].split()[-1] for output in outputs]
 
-accuracy = accuracy_score(test_dataset["annotated_type"], generated_label)
-f1 = f1_score(test_dataset["annotated_type"], generated_label, average="macro")
+accuracy = accuracy_score(test_dataset["annotated_type"], predicted_labels)
+f1 = f1_score(test_dataset["annotated_type"], predicted_labels, average="macro")
 
 print("Accuracy:", accuracy)
 print("F1 Score (Macro):", f1)
 ```
 
-### Use the Code from Scratch
+### Using the Code from Scratch
 
 The dataset is available on Hugging Face, making it very easy to access:
 
@@ -84,21 +84,17 @@ tokenizer = pipe.tokenizer
 
 def prepare_prompt(commit_message: str, git_diff: str, context_window: int = 1024):
     prompt_head = "<s>[INST] <<SYS>>\nYou are a commit classifier based on commit message and code diff.Please classify the given commit into one of the ten categories: docs, perf, style, refactor, feat, fix, test, ci, build, and chore. The definitions of each category are as follows:\n**feat**: Code changes aim to introduce new features to the codebase, encompassing both internal and user-oriented features.\n**fix**: Code changes aim to fix bugs and faults within the codebase.\n**perf**: Code changes aim to improve performance, such as enhancing execution speed or reducing memory consumption.\n**style**: Code changes aim to improve readability without affecting the meaning of the code. This type encompasses aspects like variable naming, indentation, and addressing linting or code analysis warnings.\n**refactor**: Code changes aim to restructure the program without changing its behavior, aiming to improve maintainability. To avoid confusion and overlap, we propose the constraint that this category does not include changes classified as ``perf'' or ``style''. Examples include enhancing modularity, refining exception handling, improving scalability, conducting code cleanup, and removing deprecated code.\n**docs**: Code changes that modify documentation or text, such as correcting typos, modifying comments, or updating documentation.\n**test**: Code changes that modify test files, including the addition or updating of tests.\n**ci**: Code changes to CI (Continuous Integration) configuration files and scripts, such as configuring or updating CI/CD scripts, e.g., ``.travis.yml'' and ``.github/workflows''.\n**build**: Code changes affecting the build system (e.g., Maven, Gradle, Cargo). Change examples include updating dependencies, configuring build configurations, and adding scripts.\n**chore**: Code changes for other miscellaneous tasks that do not neatly fit into any of the above categories.\n<</SYS>>\n\n"
-    prompt_head = tokenizer.encode(prompt_head, add_special_tokens=False)
-    prompt_message = tokenizer.encode(
-        f"- given commit message:\n{commit_message}\n",
-        max_length=64,
-        truncation=True,
-        add_special_tokens=False,
-    )
-    prompt_diff = tokenizer.encode(
-        f"- given commit diff: \n{git_diff}\n",
-        max_length=context_window - len(prompt_head) - len(prompt_message) - 6,
-        truncation=True,
-        add_special_tokens=False,
-    )
+    prompt_head_encoded = tokenizer.encode(prompt_head, add_special_tokens=False)
+
+    prompt_message = f"- given commit message:\n{commit_message}\n"
+    prompt_message_encoded = tokenizer.encode(prompt_message, max_length=64, truncation=True, add_special_tokens=False)
+
+    prompt_diff = f"- given commit diff: \n{git_diff}\n"
+    remaining_length = (context_window - len(prompt_head_encoded) - len(prompt_message_encoded) - 6)
+    prompt_diff_encoded = tokenizer.encode(prompt_diff, max_length=remaining_length, truncation=True, add_special_tokens=False)
+
     prompt_end = tokenizer.encode(" [/INST]", add_special_tokens=False)
-    return tokenizer.decode(prompt_head + prompt_message + prompt_diff + prompt_end)
+    return tokenizer.decode(prompt_head_encoded + prompt_message_encoded + prompt_diff_encoded + prompt_end)
 
 
 def classify_commit(commit_message: str, git_diff: str, context_window: int = 1024):
