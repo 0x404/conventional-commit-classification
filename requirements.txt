@@ -11,3 +11,4 @@ sentencepiece==0.2.0
 bitsandbytes==0.42.0
 peft==0.8.2
 PyGithub==2.4.0
+protobuf==5.28.0
