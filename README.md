@@ -13,6 +13,13 @@
 
 This repository contains all the data and code we used in the study.
 
+## 📢 News:
+
+- \[2024-11-17\] We have released two new conventional commit classifier models, accessible on Hugging Face:
+    - [Qwen2.5-Coder-1.5B-ccs](https://huggingface.co/0x404/Qwen2.5-Coder-1.5B-ccs): Based on [Qwen2.5-Coder-1.5B](https://github.com/QwenLM/Qwen2.5-Coder), this model is fine-tuned with full-parameter training on the exact same dataset. It achieves results comparable to the best results in our paper, while being only about one-fourth the size of the best-performing model in the paper!
+    - [Qwen2.5-Coder-7B-ccs](https://huggingface.co/0x404/Qwen2.5-Coder-7B-ccs): Built on [Qwen2.5-Coder-7B](https://github.com/QwenLM/Qwen2.5-Coder), this model is also fine-tuned with full-parameter training on the same dataset. While roughly having the same number of parameters as the best-performing model in our paper, it shows significant improvements, with accuracy and F1 scores exceeding the best results in the paper by more than 5%!
+    - Detailed performance comparisons can be found in [Performance of specific CCS types](#performance-of-specific-ccs-types).
+
 ## Reproduction
 
 ### Using Hugging Face (Recommended)
@@ -135,6 +142,8 @@ In this setup, we've defined a function `fetch_message_and_diff` that fetches th
 ## Performance of specific CCS types
 
 This table is the full table provided in our RQ3, including precision, recall, and f1 score for each of the ten specific CCS types, with the highest score highlighted in **bold**.
+
+**NOTE:** The results for BERT, ChatGPT4, Llama2-7B, and CodeLlama-7B presented here are from our paper. The results for Qwen2.5-Coder-1.5B and Qwen2.5-Coder-7B are from our newly trained models, which are based on [Qwen2.5-Coder](https://github.com/QwenLM/Qwen2.5-Coder) and trained/tested on the same [dataset](https://huggingface.co/datasets/0x404/ccs_dataset).
 
 | Metrics            | BERT       | ChatGPT4   | Llama2-7B     | CodeLlama-7B | Qwen2.5-Coder-1.5B |Qwen2.5-Coder-7B |
 |:-------------------|:-----------:|:-----------:|:-----------:|:------------:|:------------:|:------------:|
