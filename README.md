@@ -15,7 +15,7 @@ This repository contains all the data and code we used in the study.
 
 ## 📢 News:
 
-- **[2024-11-17]** We have released two new conventional commit classifier models, now available on Hugging Face:
+- **[2024-11-17]** We have released two new conventional commit classifier models, now available on the Hugging Face hub:
     - [Qwen2.5-Coder-1.5B-ccs](https://huggingface.co/0x404/Qwen2.5-Coder-1.5B-ccs): Based on [Qwen2.5-Coder-1.5B](https://github.com/QwenLM/Qwen2.5-Coder), trained on the exact same [dataset](https://huggingface.co/datasets/0x404/ccs_dataset). It achieves results comparable to the best results in our paper, while being only about one-fourth the size of the best-performing model in the paper!
     - [Qwen2.5-Coder-7B-ccs](https://huggingface.co/0x404/Qwen2.5-Coder-7B-ccs): Built on [Qwen2.5-Coder-7B](https://github.com/QwenLM/Qwen2.5-Coder), trained on the exact same [dataset](https://huggingface.co/datasets/0x404/ccs_dataset). While having roughly the same number of parameters as the best-performing model in our paper, it shows significant improvements, with accuracy and F1 scores exceeding the best results in the paper by more than 5%!
     - These two models were trained with a **full parameter setup** using a **4,000 token context length**, allowing them to handle longer contexts and improving their ability to process long diffs.
@@ -31,7 +31,40 @@ We have uploaded the dataset and the model's parameters to the Hugging Face hub,
 pip3 install transformers[torch] datasets scikit-learn sentencepiece protobuf
 ```
 
-Then, you can use `transformers` and `datasets` to load our model and dataset, and test it on the test set:
+#### For Qwen2.5-Coder-based model
+
+```python
+from datasets import load_dataset
+from transformers import pipeline, AutoTokenizer
+from sklearn.metrics import accuracy_score, f1_score
+
+model_name = "0x404/Qwen2.5-Coder-7B-ccs"
+
+test_dataset = load_dataset("0x404/ccs_dataset", split="test")
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+def apply_prompt_template(row):
+    prompt = tokenizer.init_kwargs["ccs_prompt_template"].format(
+        diff=row["git_diff"], 
+        message=row["masked_commit_message"]
+    )
+    return {"input_prompt": prompt}
+
+test_dataset_with_prompts = test_dataset.map(apply_prompt_template)
+
+pipe = pipeline("text-generation", model=model_name, device_map="auto")
+outputs = pipe(test_dataset_with_prompts["input_prompt"], max_new_tokens=10, pad_token_id=pipe.tokenizer.eos_token_id)
+predicted_labels = [output[0]["generated_text"].split()[-1] for output in outputs]
+
+accuracy = accuracy_score(test_dataset["annotated_type"], predicted_labels)
+f1 = f1_score(test_dataset["annotated_type"], predicted_labels, average="macro")
+
+print("Accuracy:", accuracy)
+print("F1 Score (Macro):", f1)
+```
+
+
+#### For CodeLlama-based model
 
 ```python
 from transformers import pipeline
