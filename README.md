@@ -34,6 +34,8 @@ pip3 install transformers[torch] datasets scikit-learn sentencepiece protobuf
 #### For Qwen2.5-Coder-based model
 
 ```python
+import torch
+import transformers
 from datasets import load_dataset
 from transformers import pipeline, AutoTokenizer
 from sklearn.metrics import accuracy_score, f1_score
@@ -43,17 +45,38 @@ model_name = "0x404/Qwen2.5-Coder-7B-ccs"
 test_dataset = load_dataset("0x404/ccs_dataset", split="test")
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 
+
+def truncate_text(
+    text: str,
+    tokenizer: transformers.PreTrainedTokenizer,
+    diff_max_length: int,
+):
+    encoded = tokenizer.encode(
+        text, max_length=diff_max_length, truncation=True, add_special_tokens=False
+    )
+    truncated_tokens = encoded[:diff_max_length]
+    truncated_text_str = tokenizer.decode(truncated_tokens, skip_special_tokens=True)
+    return truncated_text_str
+
+
 def apply_prompt_template(row):
+    # you can adjust the token length of the diff and message based on the
+    # actual GPU memory and your specific requirements.
     prompt = tokenizer.init_kwargs["ccs_prompt_template"].format(
-        diff=row["git_diff"], 
-        message=row["masked_commit_message"]
+        diff=truncate_text(row["git_diff"], tokenizer, 3500),
+        message=truncate_text(row["masked_commit_message"], tokenizer, 100),
     )
     return {"input_prompt": prompt}
 
+
 test_dataset_with_prompts = test_dataset.map(apply_prompt_template)
 
-pipe = pipeline("text-generation", model=model_name, device_map="auto")
-outputs = pipe(test_dataset_with_prompts["input_prompt"], max_new_tokens=10, pad_token_id=pipe.tokenizer.eos_token_id)
+pipe = pipeline("text-generation", model=model_name, device_map="auto", torch_dtype=torch.bfloat16)
+outputs = pipe(
+    test_dataset_with_prompts["input_prompt"],
+    max_new_tokens=10,
+    pad_token_id=pipe.tokenizer.eos_token_id,
+)
 predicted_labels = [output[0]["generated_text"].split()[-1] for output in outputs]
 
 accuracy = accuracy_score(test_dataset["annotated_type"], predicted_labels)
